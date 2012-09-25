@@ -16,6 +16,7 @@ import os
 import commands
 import pickle
 import pango
+import time
 
 #script_path="/tmp/autotest/"
 script_path="/usr/share/autotest/"
@@ -61,8 +62,14 @@ class MainUI(gtk.Window):
 				self.nowItem = self.allSelItem
 			if self.is_complete():
 				self.remove(self.vbox)
+				self.rsConfig = ConfigParser.ConfigParser()
 				self.show_test_result()
 			else:
+				status,strtime=commands.getstatusoutput('cat /tmp/.lastTime') 
+				if status == 0:
+					self.lastTime = strtime
+				else:
+					self.lastTime = time.time()
 				if self.tcInfo[self.nowItem-2][1].find("Hotkey") != -1:
 					self.show_hk_tip = True
 				self.show_test()
@@ -261,6 +268,8 @@ class MainUI(gtk.Window):
 		self.get_tc_from_db()
 		self.nowItem = 1
 		self.show_test();
+		self.lastTime = time.time()
+		print "time=", self.lastTime
 	def get_tc_from_file(self):
 		f = file(all_sel_item_file, 'r')
 		self.tcInfo = pickle.load(f)
@@ -452,16 +461,27 @@ class MainUI(gtk.Window):
 				rs='F'
 			self.rsConfig.readfp(open(result_file), "rw")
 			self.rsConfig.set("test_result", "".join("item_%d" % (self.tcInfo[self.nowItem-1][0])), rs)
+			self.rsConfig.set("test_result", "".join("item_%d_time" % (self.tcInfo[self.nowItem-1][0])), 
+										time.time()-self.lastTime)
 			print self.comment_buffer.get_text(self.comment_buffer.get_start_iter(), self.comment_buffer.get_end_iter())
 			self.rsConfig.set("test_result", "".join("item_%d_comment" % (self.tcInfo[self.nowItem-1][0])),\
 					 self.comment_buffer.get_text(self.comment_buffer.get_start_iter(), 				
 									self.comment_buffer.get_end_iter()))
+			self.rsConfig.write(open(result_file, "w"))
+		else:	
+			self.rsConfig.readfp(open(result_file), "rw")
+			self.rsConfig.set("test_result", "".join("item_%d_time" % (self.tcInfo[self.nowItem-1][0])), 
+										time.time()-self.lastTime)
 			self.rsConfig.write(open(result_file, "w"))
 		self.nextFromAuto=False
 		self.comment_buffer.set_text("")
 		self.back_button.show()
 		self.nowItem = self.nowItem + 1
 		cmd="".join("echo %d > /tmp/.nowItem" % self.nowItem) 	
+		os.system(cmd)
+		#record this test case start test time to file,for reboot to recover
+		self.lastTime = time.time()
+		cmd="".join("echo %s > /tmp/.lastTime" % self.lastTime) 	
 		os.system(cmd)
 		
 		if self.nowItem == self.allSelItem :
@@ -543,10 +563,6 @@ class MainUI(gtk.Window):
 
 		self.remove(self.testVbox)
 		self.show_test_result()
-	#	self.msg_box(msg)
-	#	self.upload_result()
-#		self.clean()
-	#	gtk.main_quit()
 	def upload_result(self):
 		status,os_ver=commands.getstatusoutput('cat /etc/linpus-subversion') 
 		status,test_date=commands.getstatusoutput('date +%Y-%m-%d') 
@@ -554,7 +570,7 @@ class MainUI(gtk.Window):
 		rsArray = self.rsConfig.items("test_result")
 		status,lan_mac = commands.getstatusoutput("ifconfig |grep HWaddr|grep -v wlan|awk '{print $5}'")
 		if not lan_mac:
-			self.msg_box("No lan mac address found,Error,exit 1")
+			self.msg_box("No lan mac address found,Error,cannot upload, will exit")
 			exit
 		sql="".join("select hw_id from hwinfo where upper(lan_mac)='%s'" % lan_mac)
 		print sql
@@ -569,21 +585,23 @@ class MainUI(gtk.Window):
 		print self.hw_id
 		
 		i = 0
-		sql1 = "insert into test_result ("
-		sql2 = "values ("
 		while i < self.allSelItem:
 			strItem="".join("item_%d" % self.tcInfo[i][0])
 			strItemComment="".join("item_%d_comment" % self.tcInfo[i][0])
+			strItemTime="".join("item_%d_time" % self.tcInfo[i][0])
 			try:
 				rsItem = self.rsConfig.get("test_result", strItem)
 				rsItemComment = self.rsConfig.get("test_result", strItemComment)
+				tmpTime = self.rsConfig.get("test_result", strItemTime)
+				rsItemTime = int(round(float(tmpTime)))
 			except ConfigParser.NoOptionError, e:
    				print e
 				rsItem = None
 				rsItemComment = None
-			sql="".join("""insert into atresult (hw_id, tc_id, result, comment,os_ver, test_date)	
-				values ('%s', '%s','%s','%s','%s','%s')""" \
-				% (self.hw_id, self.tcInfo[i][0],rsItem,rsItemComment, os_ver,test_date))
+				rsItemTime = 0
+			sql="".join("""insert into atresult (hw_id, tc_id, result, comment,os_ver, test_date, use_time)	
+				values ('%s', '%s','%s','%s','%s','%s', '%d')""" \
+				% (self.hw_id, self.tcInfo[i][0],rsItem,rsItemComment, os_ver,test_date, rsItemTime))
 			print sql
 			self.cursor.execute(sql)
 			i += 1
@@ -775,6 +793,8 @@ class MainUI(gtk.Window):
 		
 	def on_submit_click(self,widget):
 		self.upload_result()
+		self.clean()
+		gtk.main_quit()
 		return	
 	def on_exit_click(self, widget):
 		if self.saveCheck.get_active():
@@ -785,26 +805,31 @@ class MainUI(gtk.Window):
 	def get_all_result(self):
 		rsConfig = ConfigParser.ConfigParser()
 		rsConfig.readfp(open(result_file), "r")
-		rsList = [[],[],[],[]]
+		rsList = [[],[],[],[],[]]
 		i = 0
 		while i < self.allSelItem:
 			strItem="".join("item_%d" % self.tcInfo[i][0])
 			strItemComment="".join("item_%d_comment" % self.tcInfo[i][0])
+			strItemTime="".join("item_%d_time" % self.tcInfo[i][0])
 			try:
 				rsItem = rsConfig.get("test_result", strItem)
 				rsItemComment = rsConfig.get("test_result", strItemComment)
+				rsItemTime = rsConfig.get("test_result", strItemTime)
 				rsList[0].append(self.tcInfo[i][6])
 				rsList[1].append(self.tcInfo[i][7])
 				rsList[2].append(rsItem)
 				rsList[3].append(rsItemComment)
+				rsList[4].append(rsItemTime)
 			except ConfigParser.NoOptionError, e:
    				print e
 				rsItem = ""
 				rsItemComment = ""
+				rsItemTime = ""
 				rsList[0].append(self.tcInfo[i][6])
 				rsList[1].append(self.tcInfo[i][7])
 				rsList[2].append(rsItem)
 				rsList[3].append(rsItemComment)
+				rsList[4].append(rsItemTime)
 			i+=1	
 		return rsList	
 		

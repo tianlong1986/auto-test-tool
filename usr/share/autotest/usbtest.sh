@@ -169,8 +169,8 @@ function insert_error_and_repeat_do()
 			break
 		fi
 	done
-	echo "item_$ID]=$MODULE"  >> $HOME/.cache/autotest.txt
-	echo "item_$ID_comment]=$MODULE_COMMENT"  >> $HOME/.cache/autotest.txt
+	echo "item_$ID=$MODULE"  >> $HOME/.cache/autotest.txt
+	echo "item_$ID_comment=$MODULE_COMMENT"  >> $HOME/.cache/autotest.txt
 	MODULE_COMMENT=""
 	MODULE="P"
 
