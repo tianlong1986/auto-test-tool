@@ -599,9 +599,14 @@ class MainUI(gtk.Window):
 				rsItem = None
 				rsItemComment = None
 				rsItemTime = 0
-			sql="".join("""insert into atresult (hw_id, tc_id, result, comment,os_ver, test_date, use_time)	
-				values ('%s', '%s','%s','%s','%s','%s', '%d')""" \
-				% (self.hw_id, self.tcInfo[i][0],rsItem,rsItemComment, os_ver,test_date, rsItemTime))
+			if(self.ShowTester == 1):
+				tester = self.name_entry.get_text()
+			else:
+				tester = ""
+			sql="".join("""insert into atresult (hw_id, tc_id, result, comment,os_ver, test_date, use_time, tester)	
+				values ('%s', '%s','%s','%s','%s','%s', '%d', '%s')""" \
+				% (self.hw_id, self.tcInfo[i][0],rsItem,rsItemComment, os_ver,test_date, rsItemTime, tester))
+				
 			print sql
 			self.cursor.execute(sql)
 			i += 1
@@ -769,7 +774,19 @@ class MainUI(gtk.Window):
 		self.saveCheck = gtk.CheckButton("Delete test results when exit.")
 		self.saveCheck.set_active(False)
 
-		hbox3.pack_start(submit_button,True,False, 100)
+		#if need to show the tester
+		config = ConfigParser.ConfigParser()
+		config.readfp(open(config_file), "rb");
+		self.ShowTester = config.getint("Config", "show_tester")
+		if(self.ShowTester == 1):
+			name_label = gtk.Label("Tester:")
+			self.name_entry = gtk.Entry()
+			hbox3.pack_start(name_label,True,False, 1)
+			hbox3.pack_start(self.name_entry,True,False, 1)
+
+
+		#end
+		hbox3.pack_start(submit_button,True,False, 10)
 		hbox3.pack_start(exit_button,True,False, 5)
 		hbox3.pack_start(self.saveCheck,True,True, 5)
 		
