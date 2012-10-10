@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #author: tom
-#update: 2012.09.20
-#version: 1.1.1
+#update: 2012.10.09
+#version: 1.1.2
 #description:
 #This is a test tool
 #
@@ -96,7 +96,7 @@ class MainUI(gtk.Window):
 			print cmd
 			os.system(cmd)
 			self.show_all()
-	                cmd="sudo bash -c \"echo /tmp/autotest/autest.py >> /etc/rc.d/slim/nowait.sh\""
+	                cmd="sudo bash -c \"echo /usr/bin/autest.py >> /etc/rc.d/slim/nowait.sh\""
                 	os.system(cmd)
 
 			
@@ -471,7 +471,7 @@ class MainUI(gtk.Window):
 		else:	
 			self.rsConfig.readfp(open(result_file), "rw")
 			self.rsConfig.set("test_result", "".join("item_%d_time" % (self.tcInfo[self.nowItem-1][0])), 
-										time.time()-self.lastTime)
+										time.time()-float(self.lastTime))
 			self.rsConfig.write(open(result_file, "w"))
 		self.nextFromAuto=False
 		self.comment_buffer.set_text("")
