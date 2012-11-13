@@ -16,8 +16,10 @@ else
         return 1
 fi
 }
+sudo ifconfig $LAN_DEV up
 
 rfkill block wifi
+sleep 2
 ftp_download_big_buck_test
 if [ $? = 0 ];then
         GET_FTP="P"
