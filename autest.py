@@ -25,7 +25,8 @@ script_path="/usr/share/autotest/"
 status,user_name=commands.getstatusoutput('whoami') 
 result_file="".join("/home/%s/.cache/autotest.txt" % (user_name))
 all_sel_item_file="/tmp/.all_item"
-config_file="/tmp/autotest.cfg"
+#config_file="/tmp/autotest.cfg"
+config_file="/usr/share/autotest/autotest.cfg"
 #finish_file,if have test complete.
 finish_file="/tmp/.atFinish"
 #the window forground color,the every value is 0-65535
