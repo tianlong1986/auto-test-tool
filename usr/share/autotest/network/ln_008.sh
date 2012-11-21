@@ -1,5 +1,7 @@
 #!/bin/sh
 rsFILE="/home/`whoami`/.cache/autotest.txt"
+WLAN_DEV=`iwconfig |grep ESSID |awk '{print $1}'`
+LAN_DEV=`cat /proc/net/dev |grep :|awk '{print $1}'|grep -v lo |grep -v $WLAN_DEV |sed 's/:$//'`
 ftp_download_big_buck_test()
 {
 echo "now download big-buck-bunny.ogv..."
@@ -14,7 +16,10 @@ else
         return 1
 fi
 }
+sudo ifconfig $LAN_DEV up
 
+rfkill block wifi
+sleep 2
 ftp_download_big_buck_test
 if [ $? = 0 ];then
         GET_FTP="P"
@@ -25,4 +30,4 @@ else
 fi
 echo "item_$1=$GET_FTP" >> $rsFILE
 echo "item_$1_comment=$comment" >> $rsFILE
-
+rfkill unblock wifi

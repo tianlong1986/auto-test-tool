@@ -17,6 +17,11 @@ import commands
 import pickle
 import pango
 import time
+<<<<<<< HEAD
+=======
+import threading,time
+
+>>>>>>> 29dad7f60df2af7e9ea2e9fa0f5a2f5ddbd5c0a0
 
 #script_path="/tmp/autotest/"
 script_path="/usr/share/autotest/"
@@ -44,6 +49,18 @@ BTN_HEIGHT=35
 #main window size
 WIN_WIDTH=680
 WIN_HEIGHT=640
+
+
+class Timer(threading.Thread):
+    def __init__(self,seconds):
+	print "4444444444"
+	threading.Thread.__init__(self)
+    	self.runTime = int(seconds)
+    def run(self):
+	print "4444444444dddddd"
+        time.sleep(self.runtime)
+	print "aaa"
+     
 class MainUI(gtk.Window):
 	def __init__(self):
 		super(MainUI,self).__init__()
@@ -54,6 +71,7 @@ class MainUI(gtk.Window):
 		self.vbox=gtk.VBox(False, 2)
 		self.add(self.vbox)
 		self.show_hk_tip = False
+		self.selOnlyAuto = False
 		#if this is first run,show select test item
 		self.set_bg_image(self, win_bg_image)
 		if self.need_recover():
@@ -73,6 +91,11 @@ class MainUI(gtk.Window):
 				if self.tcInfo[self.nowItem-2][1].find("Hotkey") != -1:
 					self.show_hk_tip = True
 				self.show_test()
+<<<<<<< HEAD
+=======
+				if self.selOnlyAuto:
+					self.auto_button.clicked()
+>>>>>>> 29dad7f60df2af7e9ea2e9fa0f5a2f5ddbd5c0a0
 				#self.show_all()
 				
 				#print self.tcInfo[self.nowItem-1][4]
@@ -130,7 +153,7 @@ class MainUI(gtk.Window):
 		
 	def con_db(self):
 		config = ConfigParser.ConfigParser()
-		config.readfp(open(config_file), "rb");
+		config.readfp(open(config_file), "rb")
 		strHost = config.get("database", "host")
 		strUser = config.get("database", "user")
 		strPasswd = config.get("database", "password")
@@ -193,14 +216,23 @@ class MainUI(gtk.Window):
 		treeView.columns_autosize()
 		scrollWin.add(treeView)
 		#select all
-		chkAll = gtk.CheckButton("Check All")
-		chkAll.set_active(False)
-		chkAll.unset_flags(gtk.CAN_FOCUS)
-		chkAll.connect("clicked", self.on_chkAll_clicked, store)
+		self.chkAll = gtk.CheckButton("Check All")
+		self.chkAll.set_active(False)
+		self.chkAll.unset_flags(gtk.CAN_FOCUS)
+		self.chkAll.connect("clicked", self.on_chkAll_clicked, store)
+		#just all automatic test item
+		self.chkOnlyAuto = gtk.CheckButton("Auto test all automatic items")
+		self.chkOnlyAuto.set_active(False)
+		self.chkOnlyAuto.unset_flags(gtk.CAN_FOCUS)
+		self.chkOnlyAuto.connect("clicked", self.on_chkOnlyAuto_clicked, store)
 		#total select label
 		self.selMsgLabel = gtk.Label()
 		hbox1 = gtk.HBox()
 		hbox1.pack_end(self.selMsgLabel, False, False,5)	
+		
+		hbox2 = gtk.HBox()
+		hbox2.pack_start(self.chkAll, False, False, 0)
+		hbox2.pack_start(self.chkOnlyAuto, False, False, 30)
 
 		#start button
 		startBtn = gtk.Button("Start")
@@ -208,24 +240,39 @@ class MainUI(gtk.Window):
 		startBtn.set_size_request(100, 30)
 		startBtn.set_tooltip_text("Click me,start test")
 		self.set_button_bg_color(startBtn, button_bg_color)
-		hbox2 = gtk.HBox()
-		hbox2.pack_start(startBtn, True, False, 0)
+		hbox3 = gtk.HBox()
+		hbox3.pack_start(startBtn, True, False, 0)
 		startBtn.set_size_request(100, 30)
 		treeView.set_rules_hint(True)
 		self.vbox.pack_start(scrollWin, False,False, 2)
 		self.vbox.pack_start(hbox1, False,False, 0)
-		self.vbox.pack_start(chkAll, False,False, 20)
 		self.vbox.pack_start(hbox2, False,False, 20)
+		self.vbox.pack_start(hbox3, False,False, 20)
 	def on_chkAll_clicked(self, widget, model):
 		i = 0
+		self.selOnlyAuto = False
 		bCheck = widget.get_active()
+		if bCheck:
+			if self.chkOnlyAuto.get_active():
+				self.chkOnlyAuto.set_active(False)
 		self.selected = [0,0,[]]
 		while i < self.typeNum:
 			self.check_item(model, i, bCheck)
 			i += 1
 		self.selMsgLabel.set_label("".join("Total select %d types (%d  items)" % (self.selected[0] , self.selected[1])))	
+	
+	def on_chkOnlyAuto_clicked(self, widget, model):
+		if widget.get_active():
+			if self.chkAll.get_active():
+				self.chkAll.set_active(False)
+			self.selOnlyAuto = True
+		else:
+			self.selOnlyAuto = False
+			
+		self.selected = [0,0,[]]
+		self.selMsgLabel.set_label("".join("Will test all automatic test items"))	
 	def check_item(self,model,path,bCheck):
-		print model[path][1],bCheck
+		#print model[path][1],bCheck
 		model[path][1] = bCheck
 		if model[path][1]:
 			self.selected[0]+=1
@@ -242,7 +289,7 @@ class MainUI(gtk.Window):
         	Sets the toggled state on the toggle button to true or false.
         	"""
         	model[path][1] = not model[path][1]
-        	print "path=%s,Toggle '%s' to: %s" % (path,model[path][0], model[path][1],)
+        	#print "path=%s,Toggle '%s' to: %s" % (path,model[path][0], model[path][1],)
 		if model[path][1]:
 			self.selected[0]+=1
 			self.selected[1]+=model[path][2]
@@ -265,33 +312,49 @@ class MainUI(gtk.Window):
         	return
 	def start_test_clicked(self, widget, model):
 		self.set_title("Testing")
-		self.get_tc_from_db()
+		self.get_tc_from_db(self.selOnlyAuto)
 		self.nowItem = 1
+<<<<<<< HEAD
 		self.show_test();
 		self.lastTime = time.time()
 		print "time=", self.lastTime
+=======
+		self.show_test()
+		self.lastTime = time.time()
+		#print "time=", self.lastTime
+		if self.selOnlyAuto:
+			gobject.timeout_add(200,self.on_timer_cb)
+	def on_timer_cb(self):
+		self.auto_button.clicked()
+		return False
+				
+>>>>>>> 29dad7f60df2af7e9ea2e9fa0f5a2f5ddbd5c0a0
 	def get_tc_from_file(self):
 		f = file(all_sel_item_file, 'r')
 		self.tcInfo = pickle.load(f)
 		self.allSelItem = len(self.tcInfo)
 		f.close()
 		
-	def get_tc_from_db(self):
-		sql = "select tc_id, tc_type,tc_step, tc_biaozhun, tc_level,tc_script,tc_sn, tc_item from autotest where tc_type in ("
-		tmp = 0
-		print sql
-		for i in self.selected[2]:
-			print sql
-			if not tmp:
-				sql = sql + "".join("'%s'" % i)
-			else:
-				sql = sql + "".join(", '%s'" % i)
-			tmp = tmp + 1
-		sql = sql + "".join(")")
+	def get_tc_from_db(self, onlyAuto):
+		if not onlyAuto :
+			sql = "select tc_id, tc_type,tc_step, tc_biaozhun, tc_level,tc_script,tc_sn, tc_item from autotest where tc_type in ("
+			tmp = 0
+			#print sql
+			for i in self.selected[2]:
+			#	print sql
+				if not tmp:
+					sql = sql + "".join("'%s'" % i)
+				else:
+					sql = sql + "".join(", '%s'" % i)
+				tmp = tmp + 1
+			sql = sql + "".join(")")
+		else:
+			#只获取能完全自动测试的testcase 
+			sql = "select tc_id, tc_type,tc_step, tc_biaozhun, tc_level,tc_script,tc_sn, tc_item from autotest where tc_level=3"
 		
 		print sql
 		self.allSelItem = self.cursor.execute(sql)
-		self.tcInfo = self.cursor.fetchall();
+		self.tcInfo = self.cursor.fetchall()
 		cmd = "".join("sudo rm -rf %s" % all_sel_item_file)
 		os.system(cmd)
 		#save select items to file
@@ -304,7 +367,7 @@ class MainUI(gtk.Window):
 
 	def show_test(self):
 		self.testVbox=gtk.VBox()
-		print self.nowItem
+		#print self.nowItem
 		label="".join("%s           (%d/%d)" %(str(self.tcInfo[self.nowItem-1][1]).decode('utf-8'), self.nowItem,self.allSelItem))
 		self.title_label = gtk.Label(label)
 		#hbox item
@@ -334,7 +397,7 @@ class MainUI(gtk.Window):
                 stepTextView.set_editable(False)
                 stepTextView.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color(514, 5140, 5140))
                 stepTextView.set_cursor_visible(False)
-                stepTextView.set_wrap_mode (gtk.WRAP_CHAR);
+                stepTextView.set_wrap_mode (gtk.WRAP_CHAR)
                 stepTextView.set_size_request(100, 150)
 		stepScrolledWin.add(stepTextView)
 		stepScrolledWin.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
@@ -347,7 +410,7 @@ class MainUI(gtk.Window):
                 stdTextView.set_editable(False)
                 stdTextView.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color(514, 220, 50))
                 stdTextView.set_cursor_visible(False)
-                stdTextView.set_wrap_mode (gtk.WRAP_CHAR);
+                stdTextView.set_wrap_mode (gtk.WRAP_CHAR)
                 stdTextView.set_size_request(100, 150)
 		stdScrolledWin.add(stdTextView)
 		stdScrolledWin.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
@@ -361,7 +424,7 @@ class MainUI(gtk.Window):
                 commentTextView.set_editable(True)
                 commentTextView.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color(514, 220, 50))
                 commentTextView.set_cursor_visible(True)
-                commentTextView.set_wrap_mode (gtk.WRAP_CHAR);
+                commentTextView.set_wrap_mode (gtk.WRAP_CHAR)
                 commentTextView.set_size_request(100, 75)
 		commentScrolledWin.add(commentTextView)
 		commentScrolledWin.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
@@ -431,6 +494,7 @@ class MainUI(gtk.Window):
 		#self.skip_button.window.set_opacity(0.5)
 
 		self.show_all()
+		self.lastTime = time.time()
 		self.judge_show_button()
 
 	def set_blend (color1, color2, weight = 0.5):
@@ -509,6 +573,9 @@ class MainUI(gtk.Window):
         	       	self.std_buffer.set_text(str(self.tcInfo[self.nowItem-1][3]).decode('utf-8'))
 			self.judge_show_button()
 			self.check_hk_tip()
+			if self.selOnlyAuto:
+				print "auto clicked"
+				self.auto_button.clicked()
 		else:
 			print "have finished"
  	def on_back_click(self, widget):
@@ -545,11 +612,16 @@ class MainUI(gtk.Window):
 		self.title_label = gtk.Label(label)
 		if self.nowItem != self.allSelItem:
 			self.nextFromAuto=True
-			self.next_button.clicked();
+			self.next_button.clicked()
 		else:
 			self.next_button.set_label("Save")
 			self.next_button.show()
 			self.auto_button.hide()
+<<<<<<< HEAD
+=======
+			if self.selOnlyAuto:
+				self.next_button.clicked()
+>>>>>>> 29dad7f60df2af7e9ea2e9fa0f5a2f5ddbd5c0a0
 
 		return
 	def on_skip_click(self, widget):
@@ -680,7 +752,7 @@ class MainUI(gtk.Window):
 		self.comment_buffer.set_text(rsItemComment)
 	def get_kblayout(self):
 		cmd="".join("%s%s" %(script_path, "machine_type.py"))
-		print cmd;
+		print cmd
 		os.system(cmd)
 		status,mtype = commands.getstatusoutput('cat /tmp/.machine_type.log|grep -v ^$') 
 		if status == 0:
@@ -694,10 +766,11 @@ class MainUI(gtk.Window):
 			gtk.main_quit()
 	def check_hk_tip(self):
 		#show the hotkey tip dialog
+		print "nowItem=", self.nowItem
 		print str(self.tcInfo[self.nowItem-1][1]).decode('utf-8')
 		print self.show_hk_tip
 		if self.tcInfo[self.nowItem-1][1].find("Hotkey") != -1 and not self.show_hk_tip :
-			self.show_hk_tip = True;
+			self.show_hk_tip = True
 			cmd="".join("sh %scheckhw.sh 2>/dev/null" %(script_path))
 			os.system(cmd)
 			status,msg=commands.getstatusoutput('cat /tmp/.hotkey_tip')
@@ -717,7 +790,7 @@ class MainUI(gtk.Window):
                 rsTextView.set_editable(False)
                 rsTextView.modify_fg(gtk.STATE_NORMAL, gtk.gdk.Color(514, 5140, 5140))
                 rsTextView.set_cursor_visible(False)
-                rsTextView.set_wrap_mode (gtk.WRAP_CHAR);
+                rsTextView.set_wrap_mode (gtk.WRAP_CHAR)
                 rsTextView.set_size_request(300, 490)
 		rsScrolledWin.add(rsTextView)
 		rsScrolledWin.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
@@ -755,15 +828,15 @@ class MainUI(gtk.Window):
 		succLabel.set_attributes(attr)
 		succLabel.set_size_request(WIN_WIDTH-20, 60)
 
-		hbox1 = gtk.HBox();
+		hbox1 = gtk.HBox()
 		hbox1.pack_start(succLabel,False,False, 5)
 
-		hbox2 = gtk.HBox();
+		hbox2 = gtk.HBox()
 		hbox2.pack_start(idLabel,False,False, 20)
 		hbox2.pack_start(rsLabel,False,False, 40)
 		hbox2.pack_start(itemLabel,False,False, 40)
 	
-		hbox3 = gtk.HBox();
+		hbox3 = gtk.HBox()
                 submit_button = gtk.Button("Submit")
 		submit_button.set_size_request(BTN_WIDTH,BTN_HEIGHT)
                 submit_button.connect("clicked", self.on_submit_click)
@@ -776,7 +849,11 @@ class MainUI(gtk.Window):
 
 		#if need to show the tester
 		config = ConfigParser.ConfigParser()
+<<<<<<< HEAD
 		config.readfp(open(config_file), "rb");
+=======
+		config.readfp(open(config_file), "rb")
+>>>>>>> 29dad7f60df2af7e9ea2e9fa0f5a2f5ddbd5c0a0
 		self.ShowTester = config.getint("Config", "show_tester")
 		if(self.ShowTester == 1):
 			name_label = gtk.Label("Tester:")
